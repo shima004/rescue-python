@@ -67,10 +67,6 @@ class FireSearch(Search):
     if self.get_count_update_info() > 1:
       return self
 
-    self._logger.debug(
-      f"unreached_building_ids: {[str(id) for id in self._unreached_building_ids]}"
-    )
-
     return self
 
   def calculate(self) -> Search:
@@ -93,20 +89,11 @@ class FireSearch(Search):
       if isinstance(entity, Building) and not isinstance(entity, Refuge)
     }
 
-    self._logger.info(
-      f"Cluster {cluster_index}: {len(cluster_entities)} entities, "
-      f"{len(building_entity_ids)} building targets"
-    )
-
     for entity_id in self._perceived_buildings:
       entity = self._world_info.get_entity(entity_id)
       if isinstance(entity, Building) and not isinstance(entity, Refuge):
         if not self._is_broken_building(entity_id):
           building_entity_ids.discard(entity_id)
-
-    self._logger.info(
-      f"After filtering non-broken buildings: {len(building_entity_ids)} building targets"
-    )
 
     return building_entity_ids
 
