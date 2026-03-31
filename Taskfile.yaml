@@ -1,0 +1,165 @@
+version: "3"
+
+tasks:
+  format:
+    cmds:
+      - uv run ruff format src/
+  lint:
+    cmds:
+      - uv run ruff check src/ --preview
+  typecheck:
+    cmds:
+      - uv run ty check src/
+  test:
+    cmds:
+      - uv run pytest tests/
+  check:
+    cmds:
+      - task: format
+      - task: lint
+      - task: typecheck
+
+  run:
+    cmds:
+      - uv run python main.py -a 100 -f 100 -p 100 -ac 10 -fs 10 -po 10
+  precompute:
+    cmds:
+      - uv run python main.py --precompute -a 1 -f 1 -p 1 -ac 0 -fs 0 -po 0
+  clear-precompute-data:
+    cmds:
+      - rm -r precompute
+  clear-logs:
+    cmds:
+      - rm -f agent*.log
+
+  # 実行に必要なファイルのみをzipで圧縮する
+  # 使用例: task package
+  #         task package OUTPUT=mypackage.zip
+  package:
+    desc: 実行に必要なファイルをzipで圧縮する (OUTPUT=ファイル名 で指定可)
+    vars:
+      OUTPUT: '{{.OUTPUT | default ""}}'
+    cmds:
+      - |
+        OUTPUT="{{.OUTPUT}}"
+        if [ -z "$OUTPUT" ]; then
+          BRANCH=$(git rev-parse --abbrev-ref HEAD | tr '/' '-')
+          HASH=$(git rev-parse --short HEAD)
+          OUTPUT="ait-rescue-python-${BRANCH}-${HASH}.zip"
+        fi
+        if [[ "$OUTPUT" != /* ]]; then
+          OUTPUT="$(pwd)/$OUTPUT"
+        fi
+        rm -f "$OUTPUT"
+        zip -r "$OUTPUT" \
+          main.py \
+          pyproject.toml \
+          .python-version \
+          config/ \
+          src/ \
+          --exclude "**/__pycache__/*" \
+          --exclude "**/*.pyc" \
+          --exclude "**/*.pyo" \
+          --exclude "**/.DS_Store"
+        echo ""
+        echo "完了: $OUTPUT"
+        echo "サイズ: $(du -sh "$OUTPUT" | cut -f1)"
+
+  agent-log:
+    cmds:
+      - |
+        if [ -z "{{.AGENT_ID}}" ]; then
+          echo "Usage: task agent-log AGENT_ID=<agent_id>"
+          echo "Example: task agent-log AGENT_ID=1601066589"
+          exit 1
+        fi
+        echo "=================================================="
+        echo "Logs for Agent ID: {{.AGENT_ID}}"
+        echo "=================================================="
+        jq -c 'select(.agent_id == "{{.AGENT_ID}}")' agent.log 2>/dev/null || echo "{}"
+
+  # ２つのログの同じエージェントのログを比較する
+  # 使用例: task compare-agent LOG1=log1.txt LOG2=log2.txt AGENT_ID=1601066589 [LEVEL=debug] [LOGGER=src.module.complex.ait_search.AITSearch]
+  compare-agent:
+    cmds:
+      - |
+        if [ -z "{{.LOG1}}" ] || [ -z "{{.LOG2}}" ] || [ -z "{{.AGENT_ID}}" ]; then
+          echo "Usage: task compare-agent LOG1=<log_file_1> LOG2=<log_file_2> AGENT_ID=<agent_id> [LEVEL=<level>] [LOGGER=<logger>]"
+          echo "Example: task compare-agent LOG1=run1.log LOG2=run2.log AGENT_ID=1601066589"
+          echo "         task compare-agent LOG1=run1.log LOG2=run2.log AGENT_ID=1601066589 LEVEL=debug LOGGER=src.module.complex.ait_search.AITSearch"
+          exit 1
+        fi
+        echo "=================================================="
+        echo "Comparing Agent ID: {{.AGENT_ID}}"
+        [ -n "{{.LEVEL}}" ] && echo "Level: {{.LEVEL}}"
+        [ -n "{{.LOGGER}}" ] && echo "Logger: {{.LOGGER}}"
+        echo "File 1: {{.LOG1}}"
+        echo "File 2: {{.LOG2}}"
+        echo "=================================================="
+        echo ""
+        echo "Extracting logs with jq..."
+        JQ_FILTER='select(.agent_id == "{{.AGENT_ID}}"'
+        [ -n "{{.LEVEL}}" ] && JQ_FILTER="$JQ_FILTER and .level == \"{{.LEVEL}}\""
+        [ -n "{{.LOGGER}}" ] && JQ_FILTER="$JQ_FILTER and .logger == \"{{.LOGGER}}\""
+        JQ_FILTER="$JQ_FILTER) | del(.timestamp)"
+        jq -c "$JQ_FILTER" {{.LOG1}} > /tmp/log1_filtered.json 2>/dev/null || echo "{}" > /tmp/log1_filtered.json
+        jq -c "$JQ_FILTER" {{.LOG2}} > /tmp/log2_filtered.json 2>/dev/null || echo "{}" > /tmp/log2_filtered.json
+        LOG1_COUNT=$(wc -l < /tmp/log1_filtered.json | tr -d ' ')
+        LOG2_COUNT=$(wc -l < /tmp/log2_filtered.json | tr -d ' ')
+        echo "LOG1: $LOG1_COUNT entries"
+        echo "LOG2: $LOG2_COUNT entries"
+        echo ""
+        echo "=== Diff (- from LOG1, + from LOG2) ==="
+        diff -u --color=auto /tmp/log1_filtered.json /tmp/log2_filtered.json || true
+        rm -f /tmp/log1_filtered.json /tmp/log2_filtered.json
+
+  # すべてのエージェントIDについてログを比較する
+  # 使用例: task compare-all-agents LOG1=log1.txt LOG2=log2.txt [LEVEL=debug] [LOGGER=src.module.complex.ait_search.AITSearch]
+  compare-all-agents:
+    cmds:
+      - |
+        if [ -z "{{.LOG1}}" ] || [ -z "{{.LOG2}}" ]; then
+          echo "Usage: task compare-all-agents LOG1=<log_file_1> LOG2=<log_file_2> [LEVEL=<level>] [LOGGER=<logger>]"
+          echo "Example: task compare-all-agents LOG1=run1.log LOG2=run2.log"
+          echo "         task compare-all-agents LOG1=run1.log LOG2=run2.log LEVEL=debug"
+          exit 1
+        fi
+        echo "=================================================="
+        echo "Comparing all agents"
+        [ -n "{{.LEVEL}}" ] && echo "Level filter: {{.LEVEL}}"
+        [ -n "{{.LOGGER}}" ] && echo "Logger filter: {{.LOGGER}}"
+        echo "File 1: {{.LOG1}}"
+        echo "File 2: {{.LOG2}}"
+        echo "=================================================="
+        echo ""
+        echo "Extracting agent IDs..."
+        AGENT_IDS=$(jq -r '.agent_id // empty' {{.LOG1}} {{.LOG2}} 2>/dev/null | sort -u)
+        if [ -z "$AGENT_IDS" ]; then
+          echo "No agent_id found in log files"
+          exit 1
+        fi
+        AGENT_COUNT=$(echo "$AGENT_IDS" | wc -l | tr -d ' ')
+        echo "Found $AGENT_COUNT unique agent IDs"
+        echo ""
+        for AGENT_ID in $AGENT_IDS; do
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Agent ID: $AGENT_ID"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          JQ_FILTER="select(.agent_id == \"$AGENT_ID\""
+          [ -n "{{.LEVEL}}" ] && JQ_FILTER="$JQ_FILTER and .level == \"{{.LEVEL}}\""
+          [ -n "{{.LOGGER}}" ] && JQ_FILTER="$JQ_FILTER and .logger == \"{{.LOGGER}}\""
+          JQ_FILTER="$JQ_FILTER) | del(.timestamp)"
+          jq -c "$JQ_FILTER" {{.LOG1}} > /tmp/agent_log1.json 2>/dev/null || echo "{}" > /tmp/agent_log1.json
+          jq -c "$JQ_FILTER" {{.LOG2}} > /tmp/agent_log2.json 2>/dev/null || echo "{}" > /tmp/agent_log2.json
+          LOG1_COUNT=$(wc -l < /tmp/agent_log1.json | tr -d ' ')
+          LOG2_COUNT=$(wc -l < /tmp/agent_log2.json | tr -d ' ')
+          echo "LOG1: $LOG1_COUNT entries | LOG2: $LOG2_COUNT entries"
+          if diff -q /tmp/agent_log1.json /tmp/agent_log2.json > /dev/null 2>&1; then
+            echo "✓ No differences"
+          else
+            echo ""
+            diff -u --color=auto /tmp/agent_log1.json /tmp/agent_log2.json || true
+          fi
+          echo ""
+        done
+        rm -f /tmp/agent_log1.json /tmp/agent_log2.json
