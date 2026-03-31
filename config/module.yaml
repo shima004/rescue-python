@@ -1,5 +1,5 @@
 DefaultTacticsAmbulanceTeam:
-  HumanDetector: adf_core_python.implement.module.complex.default_human_detector.DefaultHumanDetector
+  HumanDetector: src.detector.ambulance_detector.AmbulanceDetector
   Search: src.search.ambulance_search.AmbulanceSearch
   ExtendActionTransport: adf_core_python.implement.action.default_extend_action_transport.DefaultExtendActionTransport
   ExtendActionMove: adf_core_python.implement.action.default_extend_action_move.DefaultExtendActionMove
@@ -7,7 +7,7 @@ DefaultTacticsAmbulanceTeam:
   CommandExecutorScout: adf_core_python.implement.centralized.default_command_executor_scout.DefaultCommandExecutorScout
 
 DefaultTacticsFireBrigade:
-  HumanDetector: adf_core_python.implement.module.complex.default_human_detector.DefaultHumanDetector
+  HumanDetector: src.detector.fire_detector.FireDetector
   Search: src.search.fire_search.FireSearch
   ExtendActionRescue: adf_core_python.implement.action.default_extend_action_rescue.DefaultExtendActionRescue
   ExtendActionMove: adf_core_python.implement.action.default_extend_action_move.DefaultExtendActionMove
@@ -39,10 +39,16 @@ AmbulanceSearch:
   Clustering: src.clustering.k_means_pp_clustering.KMeansPPClustering
   SendMessage: src.communication.send_message.SendMessage
 
+AmbulanceDetector:
+  Clustering: src.clustering.k_means_pp_clustering.KMeansPPClustering
+
 FireSearch:
   PathPlanning: src.path_planning.d_star_lite_path_planning.DStarLitePathPlanning
   Clustering: src.clustering.k_means_pp_clustering.KMeansPPClustering
   SendMessage: src.communication.send_message.SendMessage
+
+FireDetector:
+  Clustering: src.clustering.k_means_pp_clustering.KMeansPPClustering
 
 PoliceSearch:
   PathPlanning: src.path_planning.d_star_lite_path_planning.DStarLitePathPlanning
@@ -51,9 +57,6 @@ PoliceSearch:
 
 DefaultRoadDetector:
   PathPlanning: src.path_planning.d_star_lite_path_planning.DStarLitePathPlanning
-
-DefaultHumanDetector:
-  Clustering: src.clustering.k_means_pp_clustering.KMeansPPClustering
 
 DefaultExtendActionClear:
   PathPlanning: src.path_planning.d_star_lite_path_planning.DStarLitePathPlanning
