@@ -60,12 +60,12 @@ class SendMessage(AbstractModule):
 
   def _read_message(self, message_manager: MessageManager) -> None:
     messages = message_manager.get_received_message_list()
-    for message in messages:
-      if isinstance(message, MessageRoad):
-        self._logger.info(
-          f"Received MessageRoad: sender_entity_id={message.get_sender_entity_id()}, "
-          f"road={message.get_road_entity_id()}, is_passable={message.get_is_passable()}"
-        )
+    # for message in messages:
+    #   if isinstance(message, MessageRoad):
+    #     self._logger.info(
+    #       f"Received MessageRoad: sender_entity_id={message.get_sender_entity_id()}, "
+    #       f"road={message.get_road_entity_id()}, is_passable={message.get_is_passable()}"
+    #     )
 
   def update_info(self, message_manager: MessageManager) -> SendMessage:
     super().update_info(message_manager)
