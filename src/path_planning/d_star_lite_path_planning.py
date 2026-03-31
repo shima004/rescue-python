@@ -115,7 +115,10 @@ class DStarLitePathPlanning(PathPlanning):
       tk = self._top_key()
       if tk is None:
         break
-      if not (tk < self._calculate_key(s_start, s_start) or self._rhs[s_start] != self._g[s_start]):
+      if not (
+        tk < self._calculate_key(s_start, s_start)
+        or self._rhs[s_start] != self._g[s_start]
+      ):
         break
 
       key, _, u = heapq.heappop(self._heap)
