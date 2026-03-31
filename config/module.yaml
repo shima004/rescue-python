@@ -1,6 +1,6 @@
 DefaultTacticsAmbulanceTeam:
   HumanDetector: adf_core_python.implement.module.complex.default_human_detector.DefaultHumanDetector
-  Search: adf_core_python.implement.module.complex.default_search.DefaultSearch
+  Search: src.search.ambulance_search.AmbulanceSearch
   ExtendActionTransport: adf_core_python.implement.action.default_extend_action_transport.DefaultExtendActionTransport
   ExtendActionMove: adf_core_python.implement.action.default_extend_action_move.DefaultExtendActionMove
   CommandExecutorAmbulance: adf_core_python.implement.centralized.default_command_executor_ambulance.DefaultCommandExecutorAmbulance
@@ -8,7 +8,7 @@ DefaultTacticsAmbulanceTeam:
 
 DefaultTacticsFireBrigade:
   HumanDetector: adf_core_python.implement.module.complex.default_human_detector.DefaultHumanDetector
-  Search: adf_core_python.implement.module.complex.default_search.DefaultSearch
+  Search: src.search.fire_search.FireSearch
   ExtendActionRescue: adf_core_python.implement.action.default_extend_action_rescue.DefaultExtendActionRescue
   ExtendActionMove: adf_core_python.implement.action.default_extend_action_move.DefaultExtendActionMove
   CommandExecutorFire: adf_core_python.implement.centralized.default_command_executor_fire.DefaultCommandExecutorFire
@@ -16,7 +16,7 @@ DefaultTacticsFireBrigade:
 
 DefaultTacticsPoliceForce:
   RoadDetector: adf_core_python.implement.module.complex.default_road_detector.DefaultRoadDetector
-  Search: adf_core_python.implement.module.complex.default_search.DefaultSearch
+  Search: src.search.police_search.PoliceSearch
   ExtendActionClear: adf_core_python.implement.action.default_extend_action_clear.DefaultExtendActionClear
   ExtendActionMove: adf_core_python.implement.action.default_extend_action_move.DefaultExtendActionMove
   CommandExecutorPolice: adf_core_python.implement.centralized.default_command_executor_police.DefaultCommandExecutorPolice
@@ -34,48 +34,59 @@ DefaultTacticsPoliceOffice:
   TargetAllocator: adf_core_python.implement.module.complex.default_police_target_allocator.DefaultPoliceTargetAllocator
   CommandPicker: adf_core_python.implement.centralized.default_command_picker_police.DefaultCommandPickerPolice
 
-DefaultSearch:
-  PathPlanning: adf_core_python.implement.module.algorithm.a_star_path_planning.AStarPathPlanning
-  Clustering: adf_core_python.implement.module.algorithm.k_means_clustering.KMeansClustering
+AmbulanceSearch:
+  PathPlanning: src.path_planning.d_star_lite_path_planning.DStarLitePathPlanning
+  Clustering: src.clustering.k_means_pp_clustering.KMeansPPClustering
+  SendMessage: src.communication.send_message.SendMessage
+
+FireSearch:
+  PathPlanning: src.path_planning.d_star_lite_path_planning.DStarLitePathPlanning
+  Clustering: src.clustering.k_means_pp_clustering.KMeansPPClustering
+  SendMessage: src.communication.send_message.SendMessage
+
+PoliceSearch:
+  PathPlanning: src.path_planning.d_star_lite_path_planning.DStarLitePathPlanning
+  Clustering: src.clustering.k_means_pp_clustering.KMeansPPClustering
+  SendMessage: src.communication.send_message.SendMessage
 
 DefaultRoadDetector:
-  PathPlanning: adf_core_python.implement.module.algorithm.a_star_path_planning.AStarPathPlanning
+  PathPlanning: src.path_planning.d_star_lite_path_planning.DStarLitePathPlanning
 
 DefaultHumanDetector:
-  Clustering: adf_core_python.implement.module.algorithm.k_means_clustering.KMeansClustering
+  Clustering: src.clustering.k_means_pp_clustering.KMeansPPClustering
 
 DefaultExtendActionClear:
-  PathPlanning: adf_core_python.implement.module.algorithm.a_star_path_planning.AStarPathPlanning
+  PathPlanning: src.path_planning.d_star_lite_path_planning.DStarLitePathPlanning
 
 DefaultExtendActionRescue:
-  PathPlanning: adf_core_python.implement.module.algorithm.a_star_path_planning.AStarPathPlanning
+  PathPlanning: src.path_planning.d_star_lite_path_planning.DStarLitePathPlanning
 
 DefaultExtendActionMove:
-  PathPlanning: adf_core_python.implement.module.algorithm.a_star_path_planning.AStarPathPlanning
+  PathPlanning: src.path_planning.d_star_lite_path_planning.DStarLitePathPlanning
 
 DefaultExtendActionTransport:
-  PathPlanning: adf_core_python.implement.module.algorithm.a_star_path_planning.AStarPathPlanning
+  PathPlanning: src.path_planning.d_star_lite_path_planning.DStarLitePathPlanning
 
 DefaultCommandExecutorAmbulance:
-  PathPlanning: adf_core_python.implement.module.algorithm.a_star_path_planning.AStarPathPlanning
+  PathPlanning: src.path_planning.d_star_lite_path_planning.DStarLitePathPlanning
   ExtendActionTransport: adf_core_python.implement.action.default_extend_action_transport.DefaultExtendActionTransport
   ExtendActionMove: adf_core_python.implement.action.default_extend_action_move.DefaultExtendActionMove
 
 DefaultCommandExecutorFire:
-  PathPlanning: adf_core_python.implement.module.algorithm.a_star_path_planning.AStarPathPlanning
+  PathPlanning: src.path_planning.d_star_lite_path_planning.DStarLitePathPlanning
   ExtendActionFireRescue: adf_core_python.implement.action.default_extend_action_rescue.DefaultExtendActionRescue
   ExtendActionMove: adf_core_python.implement.action.default_extend_action_move.DefaultExtendActionMove
 
 DefaultCommandExecutorPolice:
-  PathPlanning: adf_core_python.implement.module.algorithm.a_star_path_planning.AStarPathPlanning
+  PathPlanning: src.path_planning.d_star_lite_path_planning.DStarLitePathPlanning
   ExtendActionClear: adf_core_python.implement.action.default_extend_action_clear.DefaultExtendActionClear
   ExtendActionMove: adf_core_python.implement.action.default_extend_action_move.DefaultExtendActionMove
 
 DefaultCommandExecutorScout:
-  PathPlanning: adf_core_python.implement.module.algorithm.a_star_path_planning.AStarPathPlanning
+  PathPlanning: src.path_planning.d_star_lite_path_planning.DStarLitePathPlanning
 
 DefaultCommandExecutorScoutPolice:
-  PathPlanning: adf_core_python.implement.module.algorithm.a_star_path_planning.AStarPathPlanning
+  PathPlanning: src.path_planning.d_star_lite_path_planning.DStarLitePathPlanning
   ExtendActionClear: adf_core_python.implement.action.default_extend_action_clear.DefaultExtendActionClear
 
 MessageManager:
