@@ -58,8 +58,6 @@ class FireDetector(HumanDetector):
     if self._target_human is None:
       self._target_human = self._select_target()
 
-    self._logger.info(f"FireDetector: target={self._target_human}")
-
     return self
 
   def _select_target(self) -> Human | None:
