@@ -1,5 +1,5 @@
 from adf_core_python.core.agent.info.world_info import WorldInfo
-from rcrscore.entities import AmbulanceTeam, Civilian, Human, Refuge
+from rcrscore.entities import AmbulanceTeam, Civilian, EntityID, Human, Refuge
 
 HUMAN_MAX_HP = 10000
 
@@ -40,6 +40,21 @@ def is_transporting(entity: Human, world_info: WorldInfo) -> bool:
   if position_entity is None:
     return False
   return isinstance(position_entity, AmbulanceTeam)
+
+
+def is_transporting_by_another_ambulance(
+  entity: Human, world_info: WorldInfo, ambulance_entity_id: EntityID
+) -> bool:
+  position_entity_id = entity.get_position()
+  if position_entity_id is None:
+    return False
+  position_entity = world_info.get_entity(position_entity_id)
+  if position_entity is None:
+    return False
+  return (
+    isinstance(position_entity, AmbulanceTeam)
+    and not position_entity_id == ambulance_entity_id
+  )
 
 
 def is_transported_to_refuge(entity: Human, world_info: WorldInfo) -> bool:

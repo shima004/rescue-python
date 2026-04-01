@@ -15,7 +15,7 @@ from src.utility.agent_status import (
   is_civilian,
   is_damaged,
   is_transported_to_refuge,
-  is_transporting,
+  is_transporting_by_another_ambulance,
 )
 
 
@@ -110,6 +110,8 @@ class AmbulanceDetector(HumanDetector):
       and is_alived(human)
       and is_civilian(human)
       and not is_buried(human)
-      and not is_transporting(human, self._world_info)
+      and not is_transporting_by_another_ambulance(
+        human, self._world_info, self._agent_info.get_entity_id()
+      )
       and not is_transported_to_refuge(human, self._world_info)
     )
