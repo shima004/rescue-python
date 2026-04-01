@@ -1,3 +1,4 @@
+from adf_core_python.core.agent.info.agent_info import AgentInfo
 from adf_core_python.core.agent.info.world_info import WorldInfo
 from rcrscore.entities import AmbulanceTeam, Civilian, EntityID, Human, Refuge
 
@@ -65,3 +66,17 @@ def is_transported_to_refuge(entity: Human, world_info: WorldInfo) -> bool:
   if position_entity is None:
     return False
   return isinstance(position_entity, Refuge)
+
+
+def is_ghost_human(human: Human, world_info: WorldInfo, agent_info: AgentInfo) -> bool:
+  human_position_entity_id = human.get_position()
+  my_position_entity_id = agent_info.get_position_entity_id()
+  if human_position_entity_id is None or my_position_entity_id is None:
+    return False
+  if human_position_entity_id != my_position_entity_id:
+    return False
+
+  if human.get_entity_id() in world_info.get_change_set().get_changed_entities():
+    return False
+
+  return True

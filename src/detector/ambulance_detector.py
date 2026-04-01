@@ -14,6 +14,7 @@ from src.utility.agent_status import (
   is_buried,
   is_civilian,
   is_damaged,
+  is_ghost_human,
   is_transported_to_refuge,
   is_transporting_by_another_ambulance,
 )
@@ -33,6 +34,7 @@ class AmbulanceDetector(HumanDetector):
     )
 
     self._target_human: Human | None = None
+    self._invalid_human_entity_ids: set[EntityID] = set()
 
     self._clustering: Clustering = cast(
       Clustering,
@@ -54,8 +56,15 @@ class AmbulanceDetector(HumanDetector):
       self._target_human = transport_human
       return self
 
-    if self._target_human is not None and not self._is_valid_human(self._target_human):
-      self._target_human = None
+    if self._target_human is not None:
+      if not self._is_valid_human(self._target_human):
+        self._target_human = None
+      elif is_ghost_human(self._target_human, self._world_info, self._agent_info):
+        self._logger.info(
+          f"Detect ghost human: {self._target_human.get_entity_id().get_value()}"
+        )
+        self._invalid_human_entity_ids.add(self._target_human.get_entity_id())
+        self._target_human = None
 
     if self._target_human is None:
       self._target_human = self._select_target()
@@ -73,7 +82,9 @@ class AmbulanceDetector(HumanDetector):
     cluster_valid_humans: list[Human] = [
       entity
       for entity in cluster_entities
-      if isinstance(entity, Human) and self._is_valid_human(entity)
+      if isinstance(entity, Human)
+      and self._is_valid_human(entity)
+      and entity.get_entity_id() not in self._invalid_human_entity_ids
     ]
     if len(cluster_valid_humans) != 0:
       return self._get_nearest_human(cluster_valid_humans)
@@ -81,7 +92,9 @@ class AmbulanceDetector(HumanDetector):
     world_valid_humans: list[Human] = [
       entity
       for entity in self._world_info.get_entities_of_types([Civilian])
-      if isinstance(entity, Human) and self._is_valid_human(entity)
+      if isinstance(entity, Human)
+      and self._is_valid_human(entity)
+      and entity.get_entity_id() not in self._invalid_human_entity_ids
     ]
     if len(world_valid_humans) != 0:
       return self._get_nearest_human(world_valid_humans)
