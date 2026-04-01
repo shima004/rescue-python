@@ -1,4 +1,4 @@
-from typing import Optional, cast
+from typing import cast
 
 from adf_core_python.core.agent.communication.message_manager import MessageManager
 from adf_core_python.core.agent.develop.develop_data import DevelopData
@@ -9,7 +9,7 @@ from adf_core_python.core.agent.module.module_manager import ModuleManager
 from adf_core_python.core.component.module.algorithm.clustering import Clustering
 from adf_core_python.core.component.module.algorithm.path_planning import PathPlanning
 from adf_core_python.core.component.module.complex.search import Search
-from rcrscore.entities import Building, Entity, EntityID, Refuge
+from rcrscore.entities import Area, Edge, Entity, EntityID
 
 from src.communication.send_message import SendMessage
 
@@ -27,8 +27,8 @@ class PoliceSearch(Search):
       agent_info, world_info, scenario_info, module_manager, develop_data
     )
 
-    self._unreached_building_ids: set[EntityID] = set()
-    self._result: Optional[EntityID] = None
+    self._unreached_targets: dict[EntityID, set[Edge]] = {}
+    self._result: EntityID | None = None
 
     self._clustering: Clustering = cast(
       Clustering,
@@ -58,51 +58,55 @@ class PoliceSearch(Search):
     self.register_sub_module(self._path_planning)
     self.register_sub_module(self._send_message)
 
+  def get_target_entity_id(self) -> EntityID | None:
+    return self._result
+
   def update_info(self, message_manager: MessageManager) -> Search:
     super().update_info(message_manager)
     if self.get_count_update_info() > 1:
       return self
 
-    self._logger.debug(
-      f"unreached_building_ids: {[str(id) for id in self._unreached_building_ids]}"
-    )
-
-    searched_building_id = self._agent_info.get_position_entity_id()
-    if searched_building_id is not None:
-      self._unreached_building_ids.discard(searched_building_id)
-
-    if len(self._unreached_building_ids) == 0:
-      self._unreached_building_ids = self._get_search_targets()
-
     return self
 
   def calculate(self) -> Search:
-    nearest_building_id: Optional[EntityID] = None
-    nearest_distance: Optional[float] = None
-    for building_id in self._unreached_building_ids:
-      distance = self._world_info.get_distance(
-        self._agent_info.get_entity_id(), building_id
-      )
-      if nearest_distance is None or distance < nearest_distance:
-        nearest_building_id = building_id
-        nearest_distance = distance
-    self._result = nearest_building_id
+    if len(self._unreached_targets) == 0:
+      self._unreached_targets = self._refresh_search_targets()
+    self._result = self._get_search_targets()
     return self
 
-  def get_target_entity_id(self) -> Optional[EntityID]:
-    return self._result
-
-  def _get_search_targets(self) -> set[EntityID]:
+  def _refresh_search_targets(self) -> dict[EntityID, set[Edge]]:
     cluster_index: int = self._clustering.get_cluster_index(
       self._agent_info.get_entity_id()
     )
     cluster_entities: list[Entity] = self._clustering.get_cluster_entities(
       cluster_index
     )
-    building_entity_ids: list[EntityID] = [
-      entity.get_entity_id()
-      for entity in cluster_entities
-      if isinstance(entity, Building) and not isinstance(entity, Refuge)
-    ]
+    area_entities: set[Area] = {
+      entity for entity in cluster_entities if isinstance(entity, Area)
+    }
 
-    return set(building_entity_ids)
+    passable_edges: dict[EntityID, set[Edge]] = {}
+    for area in area_entities:
+      if edges := area.get_edges():
+        for edge in edges:
+          if edge.get_neighbour() is not None:
+            passable_edges.setdefault(area.get_entity_id(), set()).add(edge)
+
+    return passable_edges
+
+  def _update_search_targets(self) -> None:
+    searched_building_id = self._agent_info.get_position_entity_id()
+    if searched_building_id is not None:
+      self._unreached_targets.pop(searched_building_id, None)
+
+  def _get_search_targets(self) -> EntityID | None:
+    nearest_target_id: EntityID | None = None
+    nearest_distance: float | None = None
+    for target_id in self._unreached_targets:
+      distance = self._world_info.get_distance(
+        self._agent_info.get_entity_id(), target_id
+      )
+      if nearest_distance is None or distance < nearest_distance:
+        nearest_target_id = target_id
+        nearest_distance = distance
+    return nearest_target_id

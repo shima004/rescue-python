@@ -55,6 +55,10 @@ PoliceSearch:
   Clustering: src.clustering.k_means_pp_clustering.KMeansPPClustering
   SendMessage: src.communication.send_message.SendMessage
 
+PoliceDetector:
+  PathPlanning: src.path_planning.d_star_lite_path_planning.DStarLitePathPlanning
+  Clustering: src.clustering.k_means_pp_clustering.KMeansPPClustering
+
 DefaultRoadDetector:
   PathPlanning: src.path_planning.d_star_lite_path_planning.DStarLitePathPlanning
 
