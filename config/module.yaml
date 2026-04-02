@@ -17,7 +17,7 @@ DefaultTacticsFireBrigade:
 DefaultTacticsPoliceForce:
   RoadDetector: src.detector.police_detector.PoliceDetector
   Search: src.search.police_search.PoliceSearch
-  ExtendActionClear: adf_core_python.implement.action.default_extend_action_clear.DefaultExtendActionClear
+  ExtendActionClear: src.extend_action.extend_action_clear.ExtendActionClear
   ExtendActionMove: adf_core_python.implement.action.default_extend_action_move.DefaultExtendActionMove
   CommandExecutorPolice: adf_core_python.implement.centralized.default_command_executor_police.DefaultCommandExecutorPolice
   CommandExecutorScout: adf_core_python.implement.centralized.default_command_executor_scout.DefaultCommandExecutorScout

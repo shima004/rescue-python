@@ -8,15 +8,9 @@ from adf_core_python.core.agent.module.module_manager import ModuleManager
 from adf_core_python.core.component.module.algorithm.clustering import Clustering
 from adf_core_python.core.component.module.algorithm.path_planning import PathPlanning
 from adf_core_python.core.component.module.complex.road_detector import RoadDetector
-from rcrscore.entities import Civilian, Entity, EntityID, Human
+from rcrscore.entities import Entity, EntityID, Road
 
-from src.utility.agent_status import (
-  is_alived,
-  is_buried,
-  is_ghost_human,
-  is_transported_to_refuge,
-  is_transporting,
-)
+from src.utility.road_status import get_impassable_edge_pairs, has_impassable_edge_pair
 
 
 class PoliceDetector(RoadDetector):
@@ -32,8 +26,7 @@ class PoliceDetector(RoadDetector):
       agent_info, world_info, scenario_info, module_manager, develop_data
     )
 
-    self._target_human: Human | None = None
-    self._invalid_human_entity_ids: set[EntityID] = set()
+    self._target_road_entity_id: EntityID | None = None
 
     self._path_planning: PathPlanning = cast(
       PathPlanning,
@@ -54,27 +47,30 @@ class PoliceDetector(RoadDetector):
     self.register_sub_module(self._clustering)
 
   def get_target_entity_id(self) -> EntityID | None:
-    if self._target_human is not None:
-      return self._target_human.get_entity_id()
-    return None
+    return self._target_road_entity_id
 
   def calculate(self) -> RoadDetector:
-    if self._target_human is not None:
-      if not self._is_valid_human(self._target_human):
-        self._target_human = None
-      elif is_ghost_human(self._target_human, self._world_info, self._agent_info):
-        self._logger.info(
-          f"Detect ghost human: {self._target_human.get_entity_id().get_value()}"
-        )
-        self._invalid_human_entity_ids.add(self._target_human.get_entity_id())
-        self._target_human = None
+    if self._target_road_entity_id is not None:
+      target_road = self._world_info.get_entity(self._target_road_entity_id)
+      assert isinstance(target_road, Road)
+      if not self._is_valid_road(target_road):
+        self._target_road_entity_id = None
 
-    if self._target_human is None:
-      self._target_human = self._select_target()
+    if self._target_road_entity_id is None:
+      target_road = self._get_target_road()
+      if target_road is not None:
+        self._target_road_entity_id = target_road.get_entity_id()
+
+    self._logger.info(
+      f"""
+      Detect target road: {self._target_road_entity_id.get_value() if self._target_road_entity_id is not None else None}
+      Impassible edge pairs: {get_impassable_edge_pairs(target_road, self._world_info) if target_road is not None else None}
+      """
+    )
 
     return self
 
-  def _select_target(self) -> Human | None:
+  def _get_target_road(self) -> Road | None:
     cluster_index: int = self._clustering.get_cluster_index(
       self._agent_info.get_entity_id()
     )
@@ -82,48 +78,39 @@ class PoliceDetector(RoadDetector):
       cluster_index
     )
 
-    cluster_valid_humans: list[Human] = [
+    cluster_valid_road: list[Road] = [
       entity
       for entity in cluster_entities
-      if isinstance(entity, Human)
-      and self._is_valid_human(entity)
-      and entity.get_entity_id() not in self._invalid_human_entity_ids
+      if isinstance(entity, Road) and self._is_valid_road(entity)
     ]
-    if len(cluster_valid_humans) != 0:
-      return self._get_nearest_human(cluster_valid_humans)
+    if len(cluster_valid_road) != 0:
+      return self._get_nearest_road(cluster_valid_road)
 
-    world_valid_humans: list[Human] = [
+    world_valid_roads: list[Road] = [
       entity
-      for entity in self._world_info.get_entities_of_types([Civilian])
-      if isinstance(entity, Human)
-      and self._is_valid_human(entity)
-      and entity.get_entity_id() not in self._invalid_human_entity_ids
+      for entity in self._world_info.get_entities_of_types([Road])
+      if isinstance(entity, Road) and self._is_valid_road(entity)
     ]
-    if len(world_valid_humans) != 0:
-      return self._get_nearest_human(world_valid_humans)
+    if len(world_valid_roads) != 0:
+      return self._get_nearest_road(world_valid_roads)
 
     return None
 
-  def _get_nearest_human(self, humans: list[Human]) -> Human:
-    nearest_human = humans[0]
+  def _get_nearest_road(self, roads: list[Road]) -> Road:
+    nearest_road = roads[0]
     nearest_distance = self._world_info.get_distance(
       self._agent_info.get_entity_id(),
-      nearest_human.get_entity_id(),
+      nearest_road.get_entity_id(),
     )
-    for human in humans:
+    for road in roads:
       distance = self._world_info.get_distance(
         self._agent_info.get_entity_id(),
-        human.get_entity_id(),
+        road.get_entity_id(),
       )
       if distance < nearest_distance:
         nearest_distance = distance
-        nearest_human = human
-    return nearest_human
+        nearest_road = road
+    return nearest_road
 
-  def _is_valid_human(self, human: Human) -> bool:
-    return (
-      is_alived(human)
-      and is_buried(human)
-      and not is_transporting(human, self._world_info)
-      and not is_transported_to_refuge(human, self._world_info)
-    )
+  def _is_valid_road(self, road: Road) -> bool:
+    return has_impassable_edge_pair(road, self._world_info)
