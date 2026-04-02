@@ -36,9 +36,9 @@ from shapely.ops import unary_union
 
 from src.utility.road_status import (
   AGENT_RADIUS,
-  _get_blockade_polygon,
-  _get_road_polygon,
+  get_blockade_polygon,
   get_passable_edge_pairs,
+  get_road_polygon,
 )
 
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "output")
@@ -92,8 +92,8 @@ def visualize(
   filename: str,
 ) -> None:
   """Save a figure with one subplot per tested edge pair."""
-  road_poly = _get_road_polygon(road)
-  blockade_polys = [_get_blockade_polygon(b) for b in blockades]
+  road_poly = get_road_polygon(road)
+  blockade_polys = [get_blockade_polygon(b) for b in blockades]
   blockade_union = unary_union(blockade_polys) if blockade_polys else Polygon()
   all_edges = road.get_edges() or []
   connected = [e for e in all_edges if e.get_neighbour() is not None]
