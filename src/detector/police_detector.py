@@ -10,7 +10,12 @@ from adf_core_python.core.component.module.algorithm.path_planning import PathPl
 from adf_core_python.core.component.module.complex.road_detector import RoadDetector
 from rcrscore.entities import Entity, EntityID, Road
 
-from src.utility.road_status import get_impassable_edge_pairs, has_impassable_edge_pair
+from src.utility.road_status import (
+  get_impassable_edge_pairs,
+  has_blockade,
+  has_impassable_edge_pair,
+  is_ghost_road,
+)
 
 
 class PoliceDetector(RoadDetector):
@@ -27,6 +32,7 @@ class PoliceDetector(RoadDetector):
     )
 
     self._target_road_entity_id: EntityID | None = None
+    self._invalid_road_entity_ids: set[EntityID] = set()
 
     self._path_planning: PathPlanning = cast(
       PathPlanning,
@@ -52,8 +58,20 @@ class PoliceDetector(RoadDetector):
   def calculate(self) -> RoadDetector:
     if self._target_road_entity_id is not None:
       target_road = self._world_info.get_entity(self._target_road_entity_id)
+      self._logger.info(
+        f"Current target road: {self._target_road_entity_id.get_value() if self._target_road_entity_id is not None else None}, "
+      )
       assert isinstance(target_road, Road)
       if not self._is_valid_road(target_road):
+        self._logger.info(
+          f"Current target road {self._target_road_entity_id.get_value()} is no longer valid, resetting target."
+        )
+        self._target_road_entity_id = None
+      elif is_ghost_road(target_road, self._world_info):
+        self._logger.info(
+          f"Detect ghost road: {self._target_road_entity_id.get_value()}"
+        )
+        self._invalid_road_entity_ids.add(self._target_road_entity_id)
         self._target_road_entity_id = None
 
     if self._target_road_entity_id is None:
@@ -81,7 +99,9 @@ class PoliceDetector(RoadDetector):
     cluster_valid_road: list[Road] = [
       entity
       for entity in cluster_entities
-      if isinstance(entity, Road) and self._is_valid_road(entity)
+      if isinstance(entity, Road)
+      and self._is_valid_road(entity)
+      and entity.get_entity_id() not in self._invalid_road_entity_ids
     ]
     if len(cluster_valid_road) != 0:
       return self._get_nearest_road(cluster_valid_road)
@@ -89,7 +109,9 @@ class PoliceDetector(RoadDetector):
     world_valid_roads: list[Road] = [
       entity
       for entity in self._world_info.get_entities_of_types([Road])
-      if isinstance(entity, Road) and self._is_valid_road(entity)
+      if isinstance(entity, Road)
+      and self._is_valid_road(entity)
+      and entity.get_entity_id() not in self._invalid_road_entity_ids
     ]
     if len(world_valid_roads) != 0:
       return self._get_nearest_road(world_valid_roads)
@@ -113,4 +135,4 @@ class PoliceDetector(RoadDetector):
     return nearest_road
 
   def _is_valid_road(self, road: Road) -> bool:
-    return has_impassable_edge_pair(road, self._world_info)
+    return has_impassable_edge_pair(road, self._world_info) and has_blockade(road)
