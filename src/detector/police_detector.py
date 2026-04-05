@@ -58,17 +58,17 @@ class PoliceDetector(RoadDetector):
   def calculate(self) -> RoadDetector:
     if self._target_road_entity_id is not None:
       target_road = self._world_info.get_entity(self._target_road_entity_id)
-      self._logger.info(
+      self._logger.debug(
         f"Current target road: {self._target_road_entity_id.get_value() if self._target_road_entity_id is not None else None}, "
       )
       assert isinstance(target_road, Road)
       if not self._is_valid_road(target_road):
-        self._logger.info(
+        self._logger.debug(
           f"Current target road {self._target_road_entity_id.get_value()} is no longer valid, resetting target."
         )
         self._target_road_entity_id = None
       elif is_ghost_road(target_road, self._world_info):
-        self._logger.info(
+        self._logger.debug(
           f"Detect ghost road: {self._target_road_entity_id.get_value()}"
         )
         self._invalid_road_entity_ids.add(self._target_road_entity_id)
@@ -79,7 +79,7 @@ class PoliceDetector(RoadDetector):
       if target_road is not None:
         self._target_road_entity_id = target_road.get_entity_id()
 
-    self._logger.info(
+    self._logger.debug(
       f"""
       Detect target road: {self._target_road_entity_id.get_value() if self._target_road_entity_id is not None else None}
       Impassible edge pairs: {get_impassable_edge_pairs(target_road, self._world_info) if target_road is not None else None}

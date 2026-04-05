@@ -33,7 +33,7 @@ from src.utility.road_status import (
 
 AGENT_MOVE_DISTANCE = 42000
 AGENT_RADIUS = 500
-DEBUG = True
+DEBUG = False
 
 
 class ExtendActionClear(ExtendAction):
@@ -116,7 +116,7 @@ class ExtendActionClear(ExtendAction):
     ):
       dist_moved = agent_position.distance(self.previous_position)
       if dist_moved < AGENT_MOVE_DISTANCE * 0.05:
-        self.logger.info(
+        self.logger.debug(
           f"Previous action was MOVE but agent only moved {dist_moved:.1f} units, which is less than half of expected {AGENT_MOVE_DISTANCE}. Prioritizing clear action."
         )
         is_stack = True
@@ -132,7 +132,7 @@ class ExtendActionClear(ExtendAction):
       if agent_blockade_union.is_empty:
         return None
       if agent_blockade_union.distance(agent_position) < AGENT_RADIUS:
-        self.logger.info(
+        self.logger.debug(
           f"Agent is within {AGENT_RADIUS} of blockade at its position, prioritizing clearing it."
         )
 
@@ -195,13 +195,13 @@ class ExtendActionClear(ExtendAction):
       blockade_clear_rate = (
         best_clear_area / total_blockade_area * 100 if total_blockade_area > 0 else 0
       )
-      self.logger.info(
+      self.logger.debug(
         f"Best clear candidate covers {best_clear_area:.1f} area, which is {blockade_clear_rate:.1f}% of the total blockade area. clear_rate threshold is {clear_rate:.1f}."
       )
       if (
         best_clear_area > clear_rate or blockade_clear_rate > 20 or is_stack
       ):  # 20%以上をクリアできれば実行
-        self.logger.info(
+        self.logger.debug(
           f"CLEAR_AREA at ({best_clear_point.x:.0f}, {best_clear_point.y:.0f}), "
           f"covered area: {best_clear_area:.1f} >= clear_rate: {clear_rate:.1f}"
         )
@@ -313,7 +313,7 @@ class ExtendActionClear(ExtendAction):
 
     move_target = best_move_target
 
-    self.logger.info(
+    self.logger.debug(
       f"MOVE to ({move_target.x:.0f}, {move_target.y:.0f}: {path}) to reach blockade, "
       f"best covered area was {best_clear_area:.1f} < clear_rate: {clear_rate:.1f}, "
       f"expected coverage from move target: {best_move_coverage:.1f}"

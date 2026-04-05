@@ -1,5 +1,6 @@
 from typing import cast
 
+from adf_core_python.core.agent.communication.message_manager import MessageManager
 from adf_core_python.core.agent.develop.develop_data import DevelopData
 from adf_core_python.core.agent.info.agent_info import AgentInfo
 from adf_core_python.core.agent.info.scenario_info import ScenarioInfo
@@ -42,6 +43,11 @@ class FireDetector(HumanDetector):
       ),
     )
     self.register_sub_module(self._clustering)
+
+  def update_info(self, message_manager: MessageManager) -> FireDetector:
+    super().update_info(message_manager)
+
+    return self
 
   def get_target_entity_id(self) -> EntityID | None:
     if self._target_human is not None:
