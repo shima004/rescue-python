@@ -28,7 +28,12 @@ from rcrscore.entities import (
   PoliceForce,
 )
 
-from src.utility.agent_status import is_alived, is_buried, is_damaged
+from src.utility.agent_status import (
+  is_alived,
+  is_buried,
+  is_damaged,
+  is_transported_to_refuge,
+)
 
 if TYPE_CHECKING:
   from adf_core_python.core.agent.communication.message_manager import MessageManager
@@ -67,9 +72,13 @@ def has_same_id_message(
 def add_messages_to_manager(
   message_manager: MessageManager,
   message_list: list[MessageTTL],
+  logger,
 ) -> None:
   for message_ttl in message_list:
     if message_ttl.ttl > 0:
+      logger.info(
+        f"Adding message with id {message_ttl.id} and ttl {message_ttl.ttl} to message manager"
+      )
       message_manager.add_message(message_ttl.message)
 
 
@@ -100,7 +109,7 @@ class SendMessage(AbstractModule):
     messages = self._create_damaged_agent_message()
     self.message_list.extend(messages)
 
-    add_messages_to_manager(message_manager, self.message_list)
+    add_messages_to_manager(message_manager, self.message_list, self._logger)
     decrease_message_ttl(self.message_list)
 
   def _create_buried_agent_message(self) -> list[MessageTTL]:
@@ -133,6 +142,7 @@ class SendMessage(AbstractModule):
         is_damaged(entity)
         and is_alived(entity)
         and not is_buried(entity)
+        and not is_transported_to_refuge(entity, self._world_info)
         and entity_id not in self.already_sent_message_damaged_agent_entity_ids
       ):
         messages.append(
