@@ -103,7 +103,7 @@ DefaultCommandExecutorScoutPolice:
   ExtendActionClear: adf_core_python.implement.action.default_extend_action_clear.DefaultExtendActionClear
 
 MessageManager:
-  PlatoonChannelSubscriber: adf_core_python.implement.module.communication.default_channel_subscriber.DefaultChannelSubscriber
+  PlatoonChannelSubscriber: src.communication.channel_subscriber.PlatoonChannelSubscriber
   CenterChannelSubscriber: adf_core_python.implement.module.communication.default_channel_subscriber.DefaultChannelSubscriber
-  PlatoonMessageCoordinator: adf_core_python.implement.module.communication.default_message_coordinator.DefaultMessageCoordinator
+  PlatoonMessageCoordinator: src.communication.message_coordinator.PlatoonMessageCoordinator
   CenterMessageCoordinator: adf_core_python.implement.module.communication.default_message_coordinator.DefaultMessageCoordinator

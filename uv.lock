@@ -4,8 +4,8 @@ requires-python = ">=3.14"
 
 [[package]]
 name = "adf-core-python"
-version = "0.2.10"
-source = { git = "https://github.com/adf-python/adf-core-python.git?rev=v0.2.10#d7b62abdda96a1fa3c5d1165fd77c5b2d10f03c0" }
+version = "0.2.11"
+source = { git = "https://github.com/adf-python/adf-core-python.git?rev=v0.2.11#f06738fc1433af3762e5551590accfa99de7eb9d" }
 dependencies = [
     { name = "bitarray" },
     { name = "click" },
@@ -593,7 +593,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "adf-core-python", git = "https://github.com/adf-python/adf-core-python.git?rev=v0.2.10" },
+    { name = "adf-core-python", git = "https://github.com/adf-python/adf-core-python.git?rev=v0.2.11" },
     { name = "shapely", specifier = ">=2.1.2" },
 ]
 

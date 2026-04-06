@@ -100,4 +100,4 @@ docstring-code-format = false
 docstring-code-line-length = "dynamic"
 
 [tool.uv.sources]
-adf-core-python = { git = "https://github.com/adf-python/adf-core-python.git", rev = "v0.2.10" }
+adf-core-python = { git = "https://github.com/adf-python/adf-core-python.git", rev = "v0.2.11" }
