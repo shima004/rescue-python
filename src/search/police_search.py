@@ -9,7 +9,7 @@ from adf_core_python.core.agent.module.module_manager import ModuleManager
 from adf_core_python.core.component.module.algorithm.clustering import Clustering
 from adf_core_python.core.component.module.algorithm.path_planning import PathPlanning
 from adf_core_python.core.component.module.complex.search import Search
-from rcrscore.entities import Area, Edge, Entity, EntityID
+from rcrscore.entities import Edge, Entity, EntityID, Road
 
 from src.communication.send_message import SendMessage
 
@@ -69,6 +69,7 @@ class PoliceSearch(Search):
     return self
 
   def calculate(self) -> Search:
+    self._update_search_targets()
     if len(self._unreached_targets) == 0:
       self._unreached_targets = self._refresh_search_targets()
     self._result = self._get_search_targets()
@@ -81,16 +82,16 @@ class PoliceSearch(Search):
     cluster_entities: list[Entity] = self._clustering.get_cluster_entities(
       cluster_index
     )
-    area_entities: set[Area] = {
-      entity for entity in cluster_entities if isinstance(entity, Area)
+    road_entities: set[Road] = {
+      entity for entity in cluster_entities if isinstance(entity, Road)
     }
 
     passable_edges: dict[EntityID, set[Edge]] = {}
-    for area in area_entities:
-      if edges := area.get_edges():
+    for road in road_entities:
+      if edges := road.get_edges():
         for edge in edges:
           if edge.get_neighbour() is not None:
-            passable_edges.setdefault(area.get_entity_id(), set()).add(edge)
+            passable_edges.setdefault(road.get_entity_id(), set()).add(edge)
 
     return passable_edges
 
