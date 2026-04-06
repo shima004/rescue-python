@@ -96,9 +96,8 @@ class PoliceSearch(Search):
     return passable_edges
 
   def _update_search_targets(self) -> None:
-    searched_building_id = self._agent_info.get_position_entity_id()
-    if searched_building_id is not None:
-      self._unreached_targets.pop(searched_building_id, None)
+    for entity_id in self._world_info.get_change_set().get_changed_entities():
+      self._unreached_targets.pop(entity_id, None)
 
   def _get_search_targets(self) -> EntityID | None:
     nearest_target_id: EntityID | None = None
