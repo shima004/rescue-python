@@ -3,10 +3,13 @@ from __future__ import annotations
 # D* Lite incremental path planning algorithm.
 # Searches backwards from goal to start and supports replanning when costs change.
 # Reference: Koenig & Likhachev, "D* Lite", AAAI 2002.
-
 import heapq
 import itertools
 
+from adf_core_python.core.agent.communication.message_manager import MessageManager
+from adf_core_python.core.agent.communication.standard.bundle.information.message_road import (
+  MessageRoad,
+)
 from adf_core_python.core.agent.develop.develop_data import DevelopData
 from adf_core_python.core.agent.info.agent_info import AgentInfo
 from adf_core_python.core.agent.info.scenario_info import ScenarioInfo
@@ -18,6 +21,10 @@ from adf_core_python.core.component.module.algorithm.path_planning import (
 from rcrscore.entities import Area, Building, Entity, EntityID, Road
 
 _INF = float("inf")
+
+# Edges where both endpoints are confirmed passable are discounted by this factor,
+# making the planner prefer confirmed-passable corridors over unknown ones.
+_PASSABLE_COST_FACTOR = 0.5
 
 
 class DStarLitePathPlanning(PathPlanning):
@@ -53,6 +60,13 @@ class DStarLitePathPlanning(PathPlanning):
     # s_last tracks the previous start to compute the km increment on next call.
     self._s_last: EntityID | None = None
 
+    # Roads confirmed passable via MessageRoad messages.
+    # Edges between two confirmed-passable roads get a cost discount.
+    self._confirmed_passable: set[EntityID] = set()
+    # Tracks whether _confirmed_passable grew since the last get_path() call.
+    # If so, we force reinitialization so cost changes are reflected.
+    self._passable_set_dirty: bool = False
+
   # ------------------------------------------------------------------
   # Cost functions
   # ------------------------------------------------------------------
@@ -62,10 +76,18 @@ class DStarLitePathPlanning(PathPlanning):
     return self._world_info.get_distance(a, b)
 
   def _c(self, a: EntityID, b: EntityID) -> float:
-    """Edge traversal cost; returns inf if a and b are not adjacent."""
-    if b in self._graph.get(a, set()):
-      return self._world_info.get_distance(a, b)
-    return _INF
+    """Edge traversal cost; returns inf if a and b are not adjacent.
+
+    When both endpoints are confirmed passable via received messages, the cost
+    is discounted by _PASSABLE_COST_FACTOR to steer the planner toward roads
+    that are guaranteed to be traversable.
+    """
+    if b not in self._graph.get(a, set()):
+      return _INF
+    dist = self._world_info.get_distance(a, b)
+    if a in self._confirmed_passable and b in self._confirmed_passable:
+      return dist * _PASSABLE_COST_FACTOR
+    return dist
 
   # ------------------------------------------------------------------
   # D* Lite core helpers
@@ -158,6 +180,20 @@ class DStarLitePathPlanning(PathPlanning):
   # PathPlanning interface
   # ------------------------------------------------------------------
 
+  def update_info(self, message_manager: MessageManager) -> DStarLitePathPlanning:
+    super().update_info(message_manager)
+    # Collect roads confirmed passable by other agents via MessageRoad.
+    for message in message_manager.get_received_message_list():
+      if not isinstance(message, MessageRoad):
+        continue
+      if message.get_is_passable() is not True:
+        continue
+      road_id = message.get_road_entity_id()
+      if road_id is not None and road_id not in self._confirmed_passable:
+        self._confirmed_passable.add(road_id)
+        self._passable_set_dirty = True
+    return self
+
   def get_path(
     self, from_entity_id: EntityID, to_entity_id: EntityID
   ) -> list[EntityID]:
@@ -168,6 +204,12 @@ class DStarLitePathPlanning(PathPlanning):
       return [s_start]
     if s_start not in self._graph or s_goal not in self._graph:
       return []
+
+    # If new passable roads were received since the last call, reinitialize so
+    # the updated edge costs (discounted for confirmed-passable nodes) take effect.
+    if self._passable_set_dirty:
+      self._s_goal = None
+      self._passable_set_dirty = False
 
     if s_goal != self._s_goal:
       # Goal changed: full reinitialization required.

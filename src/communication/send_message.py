@@ -15,6 +15,9 @@ from adf_core_python.core.agent.communication.standard.bundle.information.messag
 from adf_core_python.core.agent.communication.standard.bundle.information.message_police_force import (
   MessagePoliceForce,
 )
+from adf_core_python.core.agent.communication.standard.bundle.information.message_road import (
+  MessageRoad,
+)
 from adf_core_python.core.agent.communication.standard.bundle.standard_message_priority import (
   StandardMessagePriority,
 )
@@ -26,6 +29,7 @@ from rcrscore.entities import (
   FireBrigade,
   Human,
   PoliceForce,
+  Road,
 )
 
 from src.utility.agent_status import (
@@ -34,6 +38,7 @@ from src.utility.agent_status import (
   is_damaged,
   is_transported_to_refuge,
 )
+from src.utility.road_status import has_impassable_edge_pair
 
 if TYPE_CHECKING:
   from adf_core_python.core.agent.communication.message_manager import MessageManager
@@ -50,7 +55,11 @@ class MessageTTL:
   ttl: int
   id: int
   message: (
-    MessageAmbulanceTeam | MessageFireBrigade | MessagePoliceForce | MessageCivilian
+    MessageAmbulanceTeam
+    | MessageFireBrigade
+    | MessagePoliceForce
+    | MessageCivilian
+    | MessageRoad
   )
 
 
@@ -98,6 +107,7 @@ class SendMessage(AbstractModule):
     self.message_list: list[MessageTTL] = []
     self.already_sent_message_buried_agent_entity_ids: set[EntityID] = set()
     self.already_sent_message_damaged_agent_entity_ids: set[EntityID] = set()
+    self.already_sent_message_passable_road_entity_ids: set[EntityID] = set()
 
   def _send_messages(self, message_manager: MessageManager) -> None:
     entity = self._agent_info.get_myself()
@@ -107,6 +117,8 @@ class SendMessage(AbstractModule):
     messages = self._create_buried_agent_message()
     self.message_list.extend(messages)
     messages = self._create_damaged_agent_message()
+    self.message_list.extend(messages)
+    messages = self._create_passable_road_message()
     self.message_list.extend(messages)
 
     add_messages_to_manager(message_manager, self.message_list, self._logger)
@@ -124,7 +136,7 @@ class SendMessage(AbstractModule):
       ):
         messages.append(
           MessageTTL(
-            ttl=3,
+            ttl=2,
             id=entity_id.get_value(),
             message=self._create_agent_message(entity, is_wireless=True),
           )
@@ -147,12 +159,32 @@ class SendMessage(AbstractModule):
       ):
         messages.append(
           MessageTTL(
-            ttl=3,
+            ttl=2,
             id=entity_id.get_value(),
             message=self._create_agent_message(entity, is_wireless=True),
           )
         )
         self.already_sent_message_damaged_agent_entity_ids.add(entity_id)
+    return messages
+
+  def _create_passable_road_message(self) -> list[MessageTTL]:
+    messages: list[MessageTTL] = []
+    for entity_id in self._world_info.get_change_set().get_changed_entities():
+      entity = self._world_info.get_entity(entity_id)
+      if not isinstance(entity, Road):
+        continue
+      if (
+        not has_impassable_edge_pair(entity, self._world_info)
+        and entity_id not in self.already_sent_message_passable_road_entity_ids
+      ):
+        messages.append(
+          MessageTTL(
+            ttl=2,
+            id=entity_id.get_value(),
+            message=self._create_road_message(entity, is_wireless=True),
+          )
+        )
+        self.already_sent_message_passable_road_entity_ids.add(entity_id)
     return messages
 
   def _read_message(self, message_manager: MessageManager) -> None:
@@ -184,6 +216,11 @@ class SendMessage(AbstractModule):
           and buriedness == 0
         ):
           self.already_sent_message_damaged_agent_entity_ids.add(id)
+      elif isinstance(message, MessageRoad):
+        id = message.get_road_entity_id()
+        is_passable = message.get_is_passable()
+        if id is not None and is_passable is not None and is_passable:
+          self.already_sent_message_passable_road_entity_ids.add(id)
 
   def _create_agent_message(
     self, entity: Human, is_wireless: bool
@@ -224,6 +261,17 @@ class SendMessage(AbstractModule):
       )
     else:
       raise ValueError("Unknown agent type")
+
+  def _create_road_message(self, entity: Road, is_wireless: bool) -> MessageRoad:
+    return MessageRoad(
+      is_wireless_message=is_wireless,
+      road=entity,
+      is_send_blockade_location=True,
+      is_passable=True,
+      blockade=None,
+      priority=StandardMessagePriority.NORMAL,
+      sender_entity_id=entity.get_entity_id(),
+    )
 
   def update_info(self, message_manager: MessageManager) -> SendMessage:
     super().update_info(message_manager)
