@@ -128,14 +128,14 @@ class KMeansPPClustering(Clustering):
       ):
         cluster_index = self.get_cluster_index(sender_id)
         if cluster_index != -1:
-          self._logger.info(
+          self._logger.debug(
             f"Received buried message from {sender_id.get_value()}, buriedness={
               buriedness
             }, deleting cluster {cluster_index}"
           )
           self._delete_cluster(cluster_index)
           self._deleted_agent_entity_ids.add(sender_id)
-          self._logger.info(f"Deleted cluster {self.entity_cluster_indices}")
+          self._logger.debug(f"Deleted cluster {self.entity_cluster_indices}")
 
     return self
 
@@ -150,7 +150,7 @@ class KMeansPPClustering(Clustering):
       },
       self.__class__.__name__,
     )
-    self._logger.info(
+    self._logger.debug(
       f"Precomputed clusters: {len(cluster_entities)} clusters created and saved"
     )
     return self
@@ -178,7 +178,9 @@ class KMeansPPClustering(Clustering):
       )
       for cluster in self.cluster_entities
     ]
-    self._logger.info(f"Resumed clusters: {len(self.cluster_entities)} clusters loaded")
+    self._logger.debug(
+      f"Resumed clusters: {len(self.cluster_entities)} clusters loaded"
+    )
     return self
 
   def get_cluster_number(self) -> int:
@@ -202,7 +204,7 @@ class KMeansPPClustering(Clustering):
     if self.get_count_prepare() > 1:
       return self
     self.cluster_entities = self.create_cluster(self._cluster_number, self.entities)
-    self._logger.info(
+    self._logger.debug(
       f"Prepared clusters: {len(self.cluster_entities)} clusters created"
     )
     return self
