@@ -85,9 +85,6 @@ def add_messages_to_manager(
 ) -> None:
   for message_ttl in message_list:
     if message_ttl.ttl > 0:
-      logger.info(
-        f"Adding message with id {message_ttl.id} and ttl {message_ttl.ttl} to message manager"
-      )
       message_manager.add_message(message_ttl.message)
 
 
