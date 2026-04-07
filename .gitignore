@@ -21,4 +21,4 @@ precompute
 # Test results
 tests/output/
 
-.zip
+*.zip
