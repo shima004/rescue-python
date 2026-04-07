@@ -1,4 +1,3 @@
-import time
 from typing import cast
 
 from adf_core_python.core.agent.develop.develop_data import DevelopData
@@ -57,7 +56,6 @@ class PoliceDetector(RoadDetector):
     return self._target_road_entity_id
 
   def calculate(self) -> RoadDetector:
-    time_measurement = time.perf_counter()
     if self._target_road_entity_id is not None:
       target_road = self._world_info.get_entity(self._target_road_entity_id)
       self._logger.debug(
@@ -97,7 +95,6 @@ class PoliceDetector(RoadDetector):
       f"""
       Detect target road: {self._target_road_entity_id.get_value() if self._target_road_entity_id is not None else None}
       Impassible edge pairs: {get_impassable_edge_pairs(target_road, self._world_info) if target_road is not None else None}
-      Time taken: {time.perf_counter() - time_measurement:.4f} seconds
       """
     )
 
