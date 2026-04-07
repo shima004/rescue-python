@@ -3,7 +3,7 @@ from typing import cast
 
 from adf_core_python.core.agent.develop.develop_data import DevelopData
 from adf_core_python.core.agent.info.agent_info import AgentInfo
-from adf_core_python.core.agent.info.scenario_info import ScenarioInfo
+from adf_core_python.core.agent.info.scenario_info import ScenarioInfo, ScenarioInfoKeys
 from adf_core_python.core.agent.info.world_info import WorldInfo
 from adf_core_python.core.agent.module.module_manager import ModuleManager
 from adf_core_python.core.component.module.algorithm.clustering import Clustering
@@ -76,6 +76,18 @@ class PoliceDetector(RoadDetector):
         self._invalid_road_entity_ids.add(self._target_road_entity_id)
         self._target_road_entity_id = None
 
+    if (
+      self._scenario_info.get_value(ScenarioInfoKeys.KERNEL_AGENTS_IGNOREUNTIL, 3)
+      < self._agent_info.get_time()
+    ):
+      for entity_id in self._world_info.get_change_set().get_changed_entities():
+        entity = self._world_info.get_entity(entity_id)
+        if isinstance(entity, Road):
+          if entity_id not in self._invalid_road_entity_ids and not self._is_valid_road(
+            entity
+          ):
+            self._invalid_road_entity_ids.add(entity_id)
+
     if self._target_road_entity_id is None:
       target_road = self._get_target_road()
       if target_road is not None:
@@ -103,8 +115,8 @@ class PoliceDetector(RoadDetector):
       entity
       for entity in cluster_entities
       if isinstance(entity, Road)
-      and self._is_valid_road(entity)
       and entity.get_entity_id() not in self._invalid_road_entity_ids
+      and self._is_valid_road(entity)
     ]
     if len(cluster_valid_road) != 0:
       return self._get_nearest_road(cluster_valid_road)
@@ -113,8 +125,8 @@ class PoliceDetector(RoadDetector):
       entity
       for entity in self._world_info.get_entities_of_types([Road])
       if isinstance(entity, Road)
-      and self._is_valid_road(entity)
       and entity.get_entity_id() not in self._invalid_road_entity_ids
+      and self._is_valid_road(entity)
     ]
     if len(world_valid_roads) != 0:
       return self._get_nearest_road(world_valid_roads)
