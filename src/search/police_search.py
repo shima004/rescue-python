@@ -1,3 +1,4 @@
+import time
 from typing import cast
 
 from adf_core_python.core.agent.communication.message_manager import MessageManager
@@ -69,10 +70,14 @@ class PoliceSearch(Search):
     return self
 
   def calculate(self) -> Search:
+    time_measurement = time.perf_counter()
     self._update_search_targets()
     if len(self._unreached_targets) == 0:
       self._unreached_targets = self._refresh_search_targets()
     self._result = self._get_search_targets()
+    self._logger.debug(
+      f"Search targets updated. Time taken: {time.perf_counter() - time_measurement:.4f} seconds"
+    )
     return self
 
   def _refresh_search_targets(self) -> dict[EntityID, set[Edge]]:
