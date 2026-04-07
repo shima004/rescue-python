@@ -48,13 +48,18 @@ class PlatoonMessageCoordinator(MessageCoordinator):
       for channel in range(1, min(number_of_channels + 1, subscriber_channel_limit + 1))
     ]
 
-    for radio_message in radio_messages:
-      # Assign to the channel with the most remaining capacity
-      max_capacity_channel_index = max(
-        range(1, min(number_of_channels + 1, subscriber_channel_limit + 1)),
-        key=lambda c: size_of_channels[c - 1],
-      )
-      channel_send_message_list[max_capacity_channel_index].append(radio_message)
-      size_of_channels[max_capacity_channel_index - 1] -= radio_message.get_bit_size()
+    radio_channel_range = range(
+      1, min(number_of_channels + 1, subscriber_channel_limit + 1)
+    )
+
+    if radio_channel_range:
+      for radio_message in radio_messages:
+        # Assign to the channel with the most remaining capacity
+        max_capacity_channel_index = max(
+          radio_channel_range,
+          key=lambda c: size_of_channels[c - 1],
+        )
+        channel_send_message_list[max_capacity_channel_index].append(radio_message)
+        size_of_channels[max_capacity_channel_index - 1] -= radio_message.get_bit_size()
 
     channel_send_message_list[0].extend(voice_messages)
