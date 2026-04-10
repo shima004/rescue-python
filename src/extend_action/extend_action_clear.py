@@ -541,7 +541,6 @@ class ExtendActionClear(ExtendAction):
     if self.get_count_precompute() > 1:
       return self
     self._path_planning.precompute(precompute_data)
-    self._kernel_time = self.scenario_info.get_value("kernel.timesteps", -1)
     return self
 
   def resume(self, precompute_data: PrecomputeData) -> ExtendAction:
@@ -549,7 +548,6 @@ class ExtendActionClear(ExtendAction):
     if self.get_count_resume() > 1:
       return self
     self._path_planning.resume(precompute_data)
-    self._kernel_time = self.scenario_info.get_value("kernel.timesteps", -1)
     return self
 
   def prepare(self) -> ExtendAction:
@@ -557,7 +555,6 @@ class ExtendActionClear(ExtendAction):
     if self.get_count_prepare() > 1:
       return self
     self._path_planning.prepare()
-    self._kernel_time = self.scenario_info.get_value("kernel.timesteps", -1)
     return self
 
   def update_info(self, message_manager: MessageManager) -> ExtendAction:
