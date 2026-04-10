@@ -1,4 +1,4 @@
-from typing import Optional, cast
+from typing import cast
 
 from adf_core_python.core.agent.action.action import Action
 from adf_core_python.core.agent.action.ambulance.action_rescue import ActionRescue
@@ -8,7 +8,6 @@ from adf_core_python.core.agent.develop.develop_data import DevelopData
 from adf_core_python.core.agent.info.agent_info import AgentInfo
 from adf_core_python.core.agent.info.scenario_info import (
   ScenarioInfo,
-  ScenarioInfoKeys,
 )
 from adf_core_python.core.agent.info.world_info import WorldInfo
 from adf_core_python.core.agent.module.module_manager import ModuleManager
@@ -31,8 +30,9 @@ class ExtendActionRescue(ExtendAction):
     super().__init__(
       agent_info, world_info, scenario_info, module_manager, develop_data
     )
-    self._kernel_time: int = -1
-    self._target_entity_id: Optional[EntityID] = None
+
+    self._target_entity_id: EntityID | None = None
+    self._logger = get_agent_logger(__name__, self.agent_info)
 
     self._path_planning = cast(
       PathPlanning,
@@ -42,16 +42,11 @@ class ExtendActionRescue(ExtendAction):
       ),
     )
 
-    self._logger = get_agent_logger(__name__, self.agent_info)
-
   def precompute(self, precompute_data: PrecomputeData) -> ExtendAction:
     super().precompute(precompute_data)
     if self.get_count_precompute() >= 2:
       return self
     self._path_planning.precompute(precompute_data)
-    self._kernel_time = self.scenario_info.get_value(
-      ScenarioInfoKeys.KERNEL_TIMESTEPS, -1
-    )
     return self
 
   def resume(self, precompute_data: PrecomputeData) -> ExtendAction:
@@ -59,9 +54,6 @@ class ExtendActionRescue(ExtendAction):
     if self.get_count_resume() >= 2:
       return self
     self._path_planning.resume(precompute_data)
-    self._kernel_time = self.scenario_info.get_value(
-      ScenarioInfoKeys.KERNEL_TIMESTEPS, -1
-    )
     return self
 
   def prepare(self) -> ExtendAction:
@@ -69,9 +61,6 @@ class ExtendActionRescue(ExtendAction):
     if self.get_count_prepare() >= 2:
       return self
     self._path_planning.prepare()
-    self._kernel_time = self.scenario_info.get_value(
-      ScenarioInfoKeys.KERNEL_TIMESTEPS, -1
-    )
     return self
 
   def update_info(self, message_manager: MessageManager) -> ExtendAction:
@@ -106,7 +95,7 @@ class ExtendActionRescue(ExtendAction):
     agent: FireBrigade,
     path_planning: PathPlanning,
     target_entity_id: EntityID,
-  ) -> Optional[Action]:
+  ) -> Action | None:
     target_entity = self.world_info.get_entity(target_entity_id)
     if target_entity is None:
       return None
