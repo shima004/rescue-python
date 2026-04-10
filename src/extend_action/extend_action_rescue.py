@@ -44,28 +44,28 @@ class ExtendActionRescue(ExtendAction):
 
   def precompute(self, precompute_data: PrecomputeData) -> ExtendAction:
     super().precompute(precompute_data)
-    if self.get_count_precompute() >= 2:
+    if self.get_count_precompute() > 1:
       return self
     self._path_planning.precompute(precompute_data)
     return self
 
   def resume(self, precompute_data: PrecomputeData) -> ExtendAction:
     super().resume(precompute_data)
-    if self.get_count_resume() >= 2:
+    if self.get_count_resume() > 1:
       return self
     self._path_planning.resume(precompute_data)
     return self
 
   def prepare(self) -> ExtendAction:
     super().prepare()
-    if self.get_count_prepare() >= 2:
+    if self.get_count_prepare() > 1:
       return self
     self._path_planning.prepare()
     return self
 
   def update_info(self, message_manager: MessageManager) -> ExtendAction:
     super().update_info(message_manager)
-    if self.get_count_update_info() >= 2:
+    if self.get_count_update_info() > 1:
       return self
     self._path_planning.update_info(message_manager)
     return self
