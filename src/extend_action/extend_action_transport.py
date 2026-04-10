@@ -184,7 +184,7 @@ class ExtendActionTransport(ExtendAction):
     self, from_position_entity_id: EntityID, path_planning: PathPlanning
   ) -> list[EntityID]:
     refuges = self.world_info.get_entity_ids_of_types([Refuge])
-    nearest_path = []
+    nearest_path = path_planning.get_path(from_position_entity_id, next(iter(refuges)))
 
     for refuge_id in refuges:
       path: list[EntityID] = path_planning.get_path(from_position_entity_id, refuge_id)
