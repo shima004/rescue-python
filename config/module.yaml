@@ -1,7 +1,7 @@
 DefaultTacticsAmbulanceTeam:
   HumanDetector: src.detector.ambulance_detector.AmbulanceDetector
   Search: src.search.ambulance_search.AmbulanceSearch
-  ExtendActionTransport: adf_core_python.implement.action.default_extend_action_transport.DefaultExtendActionTransport
+  ExtendActionTransport: src.extend_action.extend_action_transport.ExtendActionTransport
   ExtendActionMove: adf_core_python.implement.action.default_extend_action_move.DefaultExtendActionMove
   CommandExecutorAmbulance: adf_core_python.implement.centralized.default_command_executor_ambulance.DefaultCommandExecutorAmbulance
   CommandExecutorScout: adf_core_python.implement.centralized.default_command_executor_scout.DefaultCommandExecutorScout
@@ -63,6 +63,9 @@ ExtendActionClear:
   PathPlanning: src.path_planning.d_star_lite_path_planning.DStarLitePathPlanning
 
 ExtendActionRescue:
+  PathPlanning: src.path_planning.d_star_lite_path_planning.DStarLitePathPlanning
+
+ExtendActionTransport:
   PathPlanning: src.path_planning.d_star_lite_path_planning.DStarLitePathPlanning
 
 DefaultRoadDetector:
