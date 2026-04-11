@@ -28,6 +28,7 @@ from src.utility.agent_status import (
   is_damaged,
   is_transporting_by_another_ambulance,
 )
+from src.utility.refuge_selection import RefugeInfo, build_refuge_info, select_refuge
 
 
 class ExtendActionTransport(ExtendAction):
@@ -55,6 +56,7 @@ class ExtendActionTransport(ExtendAction):
         "adf_core_python.implement.module.algorithm.a_star_path_planning.AStarPathPlanning",
       ),
     )
+    self._refuges: dict[EntityID, RefugeInfo] = {}
 
   def precompute(self, precompute_data: PrecomputeData) -> ExtendAction:
     super().precompute(precompute_data)
@@ -82,6 +84,7 @@ class ExtendActionTransport(ExtendAction):
     if self.get_count_update_info() > 1:
       return self
     self._path_planning.update_info(message_manager)
+    self._refuges = build_refuge_info(self.world_info)
     return self
 
   def set_target_entity_id(self, target_entity_id: EntityID) -> ExtendAction:
@@ -131,7 +134,7 @@ class ExtendActionTransport(ExtendAction):
     if isinstance(agent_position_entity, Refuge):
       return ActionUnload()
 
-    path = self._get_best_refuge_path(agent_position_entity_id, self._path_planning)
+    path = self._get_best_refuge_path(agent_position_entity_id, transport_human)
     if len(path) > 0:
       return ActionMove(path)
 
@@ -181,14 +184,12 @@ class ExtendActionTransport(ExtendAction):
     return None
 
   def _get_best_refuge_path(
-    self, from_position_entity_id: EntityID, path_planning: PathPlanning
+    self, from_position_entity_id: EntityID, transporting_human: Human
   ) -> list[EntityID]:
-    refuges = self.world_info.get_entity_ids_of_types([Refuge])
-    nearest_path = path_planning.get_path(from_position_entity_id, next(iter(refuges)))
-
-    for refuge_id in refuges:
-      path: list[EntityID] = path_planning.get_path(from_position_entity_id, refuge_id)
-      if len(path) < len(nearest_path):
-        nearest_path = path
-
-    return nearest_path
+    refuge_id = select_refuge(
+      transporting_human, self._refuges, self.agent_info, self._path_planning
+    )
+    if refuge_id is None:
+      return []
+    path = self._path_planning.get_path(from_position_entity_id, refuge_id)
+    return path if path else []
