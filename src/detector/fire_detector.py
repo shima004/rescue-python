@@ -184,8 +184,12 @@ class FireDetector(HumanDetector):
         return 4
 
   def _get_distance_cost(self, human: Human) -> float:
+    human_position_entity_id = human.get_position()
+    if human_position_entity_id is None:
+      return float("inf")
+
     distance = self._world_info.get_distance(
-      self._agent_info.get_entity_id(), human.get_entity_id()
+      self._agent_info.get_entity_id(), human_position_entity_id
     )
     if distance is None:
       return float("inf")
