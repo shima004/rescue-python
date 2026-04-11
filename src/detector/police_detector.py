@@ -10,6 +10,7 @@ from adf_core_python.core.component.module.algorithm.path_planning import PathPl
 from adf_core_python.core.component.module.complex.road_detector import RoadDetector
 from rcrscore.entities import Entity, EntityID, Road
 
+from src.module.important_road_extractor import ImportantRoadExtractor
 from src.utility.road_status import (
   get_impassable_edge_pairs,
   has_blockade,
@@ -49,8 +50,13 @@ class PoliceDetector(RoadDetector):
       ),
     )
 
+    self._important_road_extractor = ImportantRoadExtractor(
+      agent_info, world_info, scenario_info, module_manager, develop_data
+    )
+
     self.register_sub_module(self._path_planning)
     self.register_sub_module(self._clustering)
+    self.register_sub_module(self._important_road_extractor)
 
   def get_target_entity_id(self) -> EntityID | None:
     return self._target_road_entity_id
@@ -107,26 +113,53 @@ class PoliceDetector(RoadDetector):
     cluster_entities: list[Entity] = self._clustering.get_cluster_entities(
       cluster_index
     )
+    important_ids = self._important_road_extractor.get_important_road_ids()
 
-    cluster_valid_road: list[Road] = [
+    # Priority 1: 自クラスタ内 × 重要道路
+    p1: list[Road] = [
+      entity
+      for entity in cluster_entities
+      if isinstance(entity, Road)
+      and entity.get_entity_id() in important_ids
+      and entity.get_entity_id() not in self._invalid_road_entity_ids
+      and self._is_valid_road(entity)
+    ]
+    if p1:
+      return self._get_nearest_road(p1)
+
+    # Priority 2: 全域 × 重要道路（幹線を優先して助太刀）
+    p2: list[Road] = [
+      entity
+      for entity in self._world_info.get_entities_of_types([Road])
+      if isinstance(entity, Road)
+      and entity.get_entity_id() in important_ids
+      and entity.get_entity_id() not in self._invalid_road_entity_ids
+      and self._is_valid_road(entity)
+    ]
+    if p2:
+      return self._get_nearest_road(p2)
+
+    # Priority 3: 自クラスタ内 × 任意道路
+    p3: list[Road] = [
       entity
       for entity in cluster_entities
       if isinstance(entity, Road)
       and entity.get_entity_id() not in self._invalid_road_entity_ids
       and self._is_valid_road(entity)
     ]
-    if len(cluster_valid_road) != 0:
-      return self._get_nearest_road(cluster_valid_road)
+    if p3:
+      return self._get_nearest_road(p3)
 
-    world_valid_roads: list[Road] = [
+    # Priority 4: 全域 × 任意道路（フォールバック）
+    p4: list[Road] = [
       entity
       for entity in self._world_info.get_entities_of_types([Road])
       if isinstance(entity, Road)
       and entity.get_entity_id() not in self._invalid_road_entity_ids
       and self._is_valid_road(entity)
     ]
-    if len(world_valid_roads) != 0:
-      return self._get_nearest_road(world_valid_roads)
+    if p4:
+      return self._get_nearest_road(p4)
 
     return None
 
