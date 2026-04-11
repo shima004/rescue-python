@@ -21,10 +21,13 @@ from adf_core_python.core.agent.module.module_manager import ModuleManager
 from adf_core_python.core.component.module.algorithm.clustering import Clustering
 from adf_core_python.core.component.module.complex.human_detector import HumanDetector
 from rcrscore.entities import (
+  AmbulanceTeam,
   Civilian,
   Entity,
   EntityID,
+  FireBrigade,
   Human,
+  PoliceForce,
 )
 
 from src.utility.agent_status import (
@@ -153,7 +156,7 @@ class FireDetector(HumanDetector):
         cluster_valid_humans.append(message.human)
 
     if len(cluster_valid_humans) != 0:
-      return self._get_nearest_human(cluster_valid_humans)
+      return self._get_best_human(cluster_valid_humans)
 
     world_valid_humans: list[Human] = [
       entity
@@ -163,27 +166,53 @@ class FireDetector(HumanDetector):
       and entity.get_entity_id() not in self._invalid_human_entity_ids
     ]
     if len(world_valid_humans) != 0:
-      return self._get_nearest_human(world_valid_humans)
+      return self._get_best_human(world_valid_humans)
 
     return None
 
-  def _get_nearest_human(self, humans: list[Human]) -> Human:
-    nearest_human = None
-    nearest_distance = float("inf")
-    for human in humans:
-      human_position = human.get_position()
-      if human_position is None:
-        continue
-      distance = self._world_info.get_distance(
-        self._agent_info.get_entity_id(),
-        human_position,
-      )
-      if distance < nearest_distance:
-        nearest_distance = distance
-        nearest_human = human
-    if nearest_human is None:
-      raise Exception("Nearest human is None")
-    return nearest_human
+  def _get_human_type_cost(self, human: Human) -> int:
+    match human:
+      case FireBrigade():
+        return 0
+      case PoliceForce():
+        return 1
+      case AmbulanceTeam():
+        return 2
+      case Civilian():
+        return 3
+      case _:
+        return 4
+
+  def _get_distance_cost(self, human: Human) -> float:
+    distance = self._world_info.get_distance(
+      self._agent_info.get_entity_id(), human.get_entity_id()
+    )
+    if distance is None:
+      return float("inf")
+
+    return distance
+
+  def _get_buriedness_cost(self, human: Human) -> int:
+    buriedness = human.get_buriedness()
+    if buriedness is None:
+      return 2**20
+    return buriedness
+
+  def _get_entity_id_cost(self, human: Human) -> int:
+    return human.get_entity_id().get_value()
+
+  def _get_best_human(self, humans: list[Human]) -> Human:
+    if len(humans) == 0:
+      raise Exception("Human list is empty")
+    return sorted(
+      humans,
+      key=lambda human: (
+        self._get_human_type_cost(human),
+        self._get_distance_cost(human),
+        self._get_buriedness_cost(human),
+        self._get_entity_id_cost(human),
+      ),
+    )[0]
 
   def _is_valid_human(self, human: Human) -> bool:
     return (
