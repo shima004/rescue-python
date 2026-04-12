@@ -26,3 +26,4 @@ tests/gmls/*
 !tests/gmls/kobe1.gml
 
 *.zip
+.DS_Store
