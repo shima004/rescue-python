@@ -28,7 +28,10 @@ _DEFAULT_PATH_PLANNING = (
 )
 
 _DEVELOP_DATA_MIN_FREQUENCY = "ImportantRoadExtractor.minFrequency"
-_DEFAULT_MIN_FREQUENCY = 10
+
+# kobe1.gml（建物757棟）で閾値10が有効だった実績に基づく比率。
+# 未設定時はこの比率を建物数に掛けて動的に閾値を決定する。
+_FREQUENCY_RATIO = 10 / 757
 
 
 class ImportantRoadExtractor(AbstractModule):
@@ -36,9 +39,12 @@ class ImportantRoadExtractor(AbstractModule):
 
   頻度 >= minFrequency の道路と全避難所の隣接道路を重要道路とします。
 
+  minFrequency は develop.json で明示指定できます。未指定の場合は
+  建物数 × _FREQUENCY_RATIO（kobe1実績ベース）を切り上げた値を使用します。
+
   パラメータは develop.json で設定可能:
   - ``ImportantRoadExtractor.minFrequency``: 重要道路と判定する最小通過建物数
-    （デフォルト: 10）
+    （未設定時: 建物数に応じて自動計算）
   """
 
   def __init__(
@@ -61,8 +67,9 @@ class ImportantRoadExtractor(AbstractModule):
     )
     self.register_sub_module(self._path_planning)
 
-    self._min_frequency: int = develop_data.get_value(
-      _DEVELOP_DATA_MIN_FREQUENCY, _DEFAULT_MIN_FREQUENCY
+    # None = 未指定（calculate() で建物数から動的に決定）
+    self._min_frequency: int | None = develop_data.get_value(
+      _DEVELOP_DATA_MIN_FREQUENCY, None
     )
     self._important_road_ids: set[EntityID] = set()
 
@@ -102,12 +109,21 @@ class ImportantRoadExtractor(AbstractModule):
     )
     self._log_frequency_distribution(freq)
 
+    # 閾値: 明示指定があればそれを使い、なければ建物数から自動計算
+    if self._min_frequency is not None:
+      threshold = self._min_frequency
+    else:
+      threshold = max(1, round(len(buildings) * _FREQUENCY_RATIO))
+      self._logger.info(
+        f"MinFrequency: auto={threshold} (buildings={len(buildings)}, ratio={_FREQUENCY_RATIO:.4f})"
+      )
+
     # 頻度閾値以上の道路を重要道路として選択
     self._important_road_ids = {
-      rid for rid, cnt in freq.items() if cnt >= self._min_frequency
+      rid for rid, cnt in freq.items() if cnt >= threshold
     }
     self._logger.info(
-      f"FrequencyFilter: threshold={self._min_frequency}, "
+      f"FrequencyFilter: threshold={threshold}, "
       f"selected={len(self._important_road_ids)}/{len(freq)}"
     )
 
