@@ -211,8 +211,8 @@ class FireDetector(HumanDetector):
     return sorted(
       humans,
       key=lambda human: (
-        self._get_human_type_cost(human),
         self._get_distance_cost(human),
+        self._get_human_type_cost(human),
         self._get_buriedness_cost(human),
         self._get_entity_id_cost(human),
       ),
