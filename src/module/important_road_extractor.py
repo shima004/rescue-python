@@ -78,7 +78,11 @@ class ImportantRoadExtractor(AbstractModule):
     if self._important_road_ids:
       return self
 
-    refuges = self._world_info.get_entities_of_types([Refuge])
+    refuges = [
+      r
+      for r in self._world_info.get_entities_of_types([Refuge])
+      if isinstance(r, Refuge)
+    ]
     buildings = self._world_info.get_entities_of_types([Building])
 
     if not refuges:
@@ -119,9 +123,7 @@ class ImportantRoadExtractor(AbstractModule):
       )
 
     # 頻度閾値以上の道路を重要道路として選択
-    self._important_road_ids = {
-      rid for rid, cnt in freq.items() if cnt >= threshold
-    }
+    self._important_road_ids = {rid for rid, cnt in freq.items() if cnt >= threshold}
     self._logger.info(
       f"FrequencyFilter: threshold={threshold}, "
       f"selected={len(self._important_road_ids)}/{len(freq)}"
