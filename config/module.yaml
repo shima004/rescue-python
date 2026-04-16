@@ -59,6 +59,9 @@ PoliceDetector:
   PathPlanning: src.path_planning.d_star_lite_path_planning.DStarLitePathPlanning
   Clustering: src.clustering.k_means_pp_clustering.KMeansPPClustering
 
+ImportantRoadExtractor:
+  PathPlanning: src.path_planning.d_star_lite_path_planning.DStarLitePathPlanning
+
 ExtendActionClear:
   PathPlanning: src.path_planning.d_star_lite_path_planning.DStarLitePathPlanning
 
