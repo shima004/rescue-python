@@ -149,16 +149,33 @@ def _estimate_wait_time(refuge_info: RefugeInfo, agent_info: AgentInfo) -> float
 
 
 def _calc_empty_queue_probability(c: int, rho: float) -> float:
-  """Compute P0 — the probability that all servers are idle (Erlang-C)."""
-  total = sum((c * rho) ** k / math.factorial(k) for k in range(c))
-  total += (c * rho) ** c / math.factorial(c) * (1.0 / (1.0 - rho))
-  return 1.0 / total
+  """Compute P0 — the probability that all servers are idle (Erlang-C).
+
+  Uses log-space arithmetic to avoid OverflowError when c is large.
+  """
+  log_crho = math.log(c * rho)
+  # log((c*rho)^k / k!) for k in 0..c-1
+  log_terms = [k * log_crho - math.lgamma(k + 1) for k in range(c)]
+  # log((c*rho)^c / c! / (1-rho))
+  log_terms.append(c * log_crho - math.lgamma(c + 1) - math.log(1.0 - rho))
+  max_log = max(log_terms)
+  log_total = max_log + math.log(sum(math.exp(lt - max_log) for lt in log_terms))
+  return math.exp(-log_total)
 
 
 def _calc_average_wait_time(
   c: int, lambda_: float, rho: float, pi_zero: float
 ) -> float:
-  """Compute Wq — the average time a customer waits in the queue."""
-  return (
-    pi_zero * rho * (c * rho) ** c / (lambda_ * (1.0 - rho) ** 2 * math.factorial(c))
+  """Compute Wq — the average time a customer waits in the queue.
+
+  Uses log-space arithmetic to avoid OverflowError when c is large.
+  """
+  log_wq = (
+    math.log(pi_zero)
+    + math.log(rho)
+    + c * math.log(c * rho)
+    - math.lgamma(c + 1)
+    - math.log(lambda_)
+    - 2.0 * math.log(1.0 - rho)
   )
+  return math.exp(log_wq)
