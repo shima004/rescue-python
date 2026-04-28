@@ -20,7 +20,7 @@ from adf_core_python.core.agent.info.world_info import WorldInfo
 from adf_core_python.core.agent.module.module_manager import ModuleManager
 from adf_core_python.core.component.module.algorithm.clustering import Clustering
 from adf_core_python.core.component.module.complex.human_detector import HumanDetector
-from rcrscore.entities import Civilian, Entity, EntityID, Human
+from rcrscore.entities import Area, Civilian, Entity, EntityID, Human
 
 from src.utility.agent_status import (
   is_alived,
@@ -71,6 +71,9 @@ class AmbulanceDetector(HumanDetector):
     self._human_damaged_messages = increment_step_ago_for_human_messages(
       self._human_damaged_messages
     )
+    self._human_damaged_messages = [
+      m for m in self._human_damaged_messages if m.step_ago <= 30
+    ]
 
     for message in message_manager.get_received_message_list():
       if isinstance(
@@ -84,9 +87,10 @@ class AmbulanceDetector(HumanDetector):
         if human is None:
           continue
         if (
-          (is_buried(human))
-          or (not is_damaged(human))
-          or (human.get_position() is None)
+          not isinstance(human, Civilian)
+          or is_buried(human)
+          or not is_damaged(human)
+          or human.get_position() is None
         ):
           continue
         self._human_damaged_messages.append(
@@ -108,7 +112,10 @@ class AmbulanceDetector(HumanDetector):
       if entity is None:
         positon = self._target_human.get_position()
         if positon is not None:
-          return positon
+          positon_entity = self._world_info.get_entity(positon)
+          if isinstance(positon_entity, Area):
+            return positon
+        return None
       if isinstance(entity, Human):
         self._target_human = entity
       return self._target_human.get_entity_id()
@@ -152,11 +159,18 @@ class AmbulanceDetector(HumanDetector):
     ]
 
     cluster_entity_ids = set(entity.get_entity_id() for entity in cluster_entities)
+    non_cluster_message_humans: list[Human] = []
     for message in self._human_damaged_messages:
       if message.human.get_entity_id() in self._invalid_human_entity_ids:
         continue
+      current = self._world_info.get_entity(message.human.get_entity_id())
+      human = current if isinstance(current, Human) else message.human
+      if isinstance(current, Human) and not self._is_valid_human(current):
+        continue
       if message.human.get_position() in cluster_entity_ids:
-        cluster_valid_humans.append(message.human)
+        cluster_valid_humans.append(human)
+      else:
+        non_cluster_message_humans.append(human)
 
     if len(cluster_valid_humans) != 0:
       return self._get_nearest_human(cluster_valid_humans)
@@ -170,6 +184,9 @@ class AmbulanceDetector(HumanDetector):
     ]
     if len(world_valid_humans) != 0:
       return self._get_nearest_human(world_valid_humans)
+
+    if len(non_cluster_message_humans) != 0:
+      return self._get_nearest_human(non_cluster_message_humans)
 
     return None
 
