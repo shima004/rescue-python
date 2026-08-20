@@ -20,7 +20,6 @@ WORKDIR /app
 COPY --from=builder /app/.venv ./.venv
 COPY main.py ./
 COPY config/ ./config/
-COPY precompute/ ./precompute/
 COPY src/ ./src/
 
 ENTRYPOINT ["/app/.venv/bin/python", "main.py"]
